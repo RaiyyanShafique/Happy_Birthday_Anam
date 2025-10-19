@@ -85,16 +85,19 @@
             100% { transform: translateX(-50%) scale(1.05); opacity: 1; }
         }
 
-        /* --- Confetti/Firework Particles --- */
+        /* --- Confetti/Firework Particles (Realistic) --- */
         .confetti {
-            position: absolute;
-            width: 10px;
-            height: 10px;
-            background-color: var(--primary-pink);
+            position: fixed; /* Fixed position allows particles to fly across the entire viewport */
             opacity: 0;
             pointer-events: none;
+            transition: none;
+            will-change: transform, opacity;
+        }
+        .confetti.round {
             border-radius: 50%;
-            transition: all 0.5s;
+        }
+        .confetti.strip {
+            border-radius: 1px;
         }
 
         .fireworks-container {
@@ -127,30 +130,36 @@
         const nickname = "Anmu";
         const birthdayDate = new Date('October 20, 2025 00:00:00'); // Assuming a general future date for the demo
 
-        // --- Utility Functions ---
+        // --- Utility Functions (Enhanced Confetti) ---
 
         // Function to create and launch a single confetti particle
-        function createConfetti(x, y, color, size = '10px', shape = 'circle') {
+        function createConfetti(x, y, color, size, shape, container) {
             const particle = document.createElement('div');
-            particle.className = `confetti`;
-            if (shape === 'square') {
-                particle.style.borderRadius = '0';
+
+            if (shape === 'strip') {
+                particle.className = 'confetti strip';
+                particle.style.width = `${size * 2}px`;
+                particle.style.height = `${size * 0.5}px`;
+            } else {
+                particle.className = 'confetti round';
+                particle.style.width = `${size}px`;
+                particle.style.height = `${size}px`;
             }
-            particle.style.width = size;
-            particle.style.height = size;
+
             particle.style.backgroundColor = color;
             particle.style.left = `${x}px`;
             particle.style.top = `${y}px`;
             particle.style.opacity = 1;
 
             const angle = Math.random() * Math.PI * 2;
-            const velocity = Math.random() * 25 + 5;
-            const lifetime = Math.random() * 2000 + 1000;
+            const velocity = Math.random() * 50 + 20; // Increased velocity for better pop
+            const lifetime = Math.random() * 2500 + 1500; // Longer lifetime
+            const rotationSpeed = Math.random() * 0.2 - 0.1; // Natural rotation
 
             const dx = Math.cos(angle) * velocity;
-            const dy = Math.sin(angle) * velocity - 10; // Initial upward bias
+            const dy = Math.sin(angle) * velocity - 30; // Strong initial upward bias
 
-            appContainer.appendChild(particle);
+            container.appendChild(particle);
 
             let startTime = performance.now();
 
@@ -162,12 +171,16 @@
                 }
 
                 const timeRatio = elapsedTime / 1000;
-                const newX = x + dx * timeRatio;
-                // Add gravity: 0.5 * g * t^2. g is acceleration due to gravity (simplified).
-                const newY = y + dy * timeRatio + 0.5 * 9.8 * timeRatio * timeRatio * 50;
+                // Position update based on time, velocity, and gravity (simplified)
+                const currentX = x + dx * timeRatio;
+                const currentY = y + dy * timeRatio + 0.5 * 9.8 * timeRatio * timeRatio * 50;
 
-                particle.style.transform = `translate(${newX - x}px, ${newY - y}px) rotate(${elapsedTime / 10}deg)`;
-                particle.style.opacity = 1 - (elapsedTime / lifetime);
+                // Opacity fades out towards the end of lifetime
+                const opacity = 1 - (elapsedTime / lifetime);
+
+                // Apply translation and rotation
+                particle.style.transform = `translate(${currentX - x}px, ${currentY - y}px) rotate(${elapsedTime * rotationSpeed}deg)`;
+                particle.style.opacity = opacity;
 
                 requestAnimationFrame(animateConfetti);
             }
@@ -175,15 +188,16 @@
         }
 
         // Function to simulate a "pop" of confetti from a point
-        function launchConfettiBurst(count = 30, centerX, centerY) {
-            const colors = ['#ff69b4', '#ffd700', '#8a2be2', '#ff4500', '#00ced1'];
-            const shapes = ['circle', 'square'];
+        function launchConfettiBurst(count = 75, centerX, centerY, container) {
+            const colors = ['#ff69b4', '#ffd700', '#8a2be2', '#ff4500', '#00ced1', '#ffffff', '#ff99e8', '#fff8dc'];
+            // Prioritizing round and strip shapes for a realistic cracker look
+            const shapes = ['round', 'strip', 'round']; 
 
             for (let i = 0; i < count; i++) {
                 const color = colors[Math.floor(Math.random() * colors.length)];
                 const shape = shapes[Math.floor(Math.random() * shapes.length)];
-                const size = `${Math.random() * 8 + 4}px`; // 4px to 12px
-                createConfetti(centerX, centerY, color, size, shape);
+                const size = Math.random() * 6 + 4; // Size between 4 and 10 pixels
+                createConfetti(centerX, centerY, color, size, shape, container);
             }
         }
 
@@ -193,7 +207,7 @@
             if (currentPage < totalPages) {
                 currentPage++;
             } else {
-                // Wrap back to the start or show a final message
+                // Wrap back to the start
                 currentPage = 1;
             }
             renderPage();
@@ -202,6 +216,8 @@
         function renderPage() {
             // Clear the existing content
             appContainer.innerHTML = '';
+            // Clear the fireworks container on page change
+            fireworksContainer.innerHTML = '';
             // Hide fireworks on non-firework pages
             fireworksContainer.classList.add('hidden');
 
@@ -211,10 +227,10 @@
             let nextButtonText = 'Continue >>';
 
             if (currentPage === 1) {
-                // --- Page 1: Landing/Intro ---
+                // --- Page 1: Landing/Intro (Updated) ---
                 content.innerHTML = `
-                    <h1 class="text-4xl md:text-6xl title-font mb-4">You're Invited!</h1>
-                    <p class="text-xl md:text-2xl font-bold text-gray-700">Get Ready for the Birthday Celebration of</p>
+                    <h1 class="text-4xl md:text-6xl title-font mb-4 text-center">A Very Special Wish...</h1>
+                    <p class="text-xl md:text-2xl font-bold text-gray-700">It's time to celebrate the amazing</p>
                     <h2 class="text-6xl md:text-8xl font-black text-pink-600 animate-bounce title-font">${nickname}!</h2>
                     <p class="text-lg md:text-xl font-medium text-gray-500">The day is October 20th</p>
                     <div class="flex space-x-4">
@@ -257,19 +273,23 @@
 
                 // Attach pop effect handler
                 setTimeout(() => {
-                    document.getElementById('pop-button').addEventListener('click', () => {
-                        // Launch a huge confetti/fireworks burst from the center of the button
-                        const buttonRect = document.getElementById('pop-button').getBoundingClientRect();
-                        const centerX = buttonRect.left + buttonRect.width / 2;
-                        const centerY = buttonRect.top + buttonRect.height / 2;
+                    const popButton = document.getElementById('pop-button');
+                    if (popButton) {
+                        popButton.addEventListener('click', () => {
+                            // Get the button's position relative to the viewport
+                            const buttonRect = popButton.getBoundingClientRect();
+                            const centerX = buttonRect.left + buttonRect.width / 2;
+                            const centerY = buttonRect.top + buttonRect.height / 2;
 
-                        // Create the 'cracker' effect
-                        for (let i = 0; i < 5; i++) {
-                            setTimeout(() => {
-                                launchConfettiBurst(50, centerX, centerY);
-                            }, i * 100);
-                        }
-                    });
+                            // Create the 'cracker' effect - launching multiple, tightly-timed bursts for realism
+                            for (let i = 0; i < 8; i++) {
+                                setTimeout(() => {
+                                    // Launching 100 particles per burst, 8 times!
+                                    launchConfettiBurst(100, centerX, centerY, fireworksContainer);
+                                }, i * 80); 
+                            }
+                        });
+                    }
                 }, 0); // Ensure button exists before attaching listener
             }
 
@@ -297,7 +317,13 @@
         // Make a periodic confetti background effect on all pages
         setInterval(() => {
             if (currentPage !== 3) {
-                launchConfettiBurst(5, Math.random() * appContainer.offsetWidth, appContainer.offsetHeight);
+                // Launch smaller bursts (10 particles) from the bottom of the card for subtle background effect
+                const appRect = appContainer.getBoundingClientRect();
+                const randomX = appRect.left + Math.random() * appRect.width;
+                const randomY = appRect.top + appRect.height; 
+                
+                // Using fireworksContainer as the particle container
+                launchConfettiBurst(10, randomX, randomY, fireworksContainer); 
             }
         }, 3000);
 
